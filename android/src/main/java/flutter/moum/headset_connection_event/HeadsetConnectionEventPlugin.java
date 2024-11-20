@@ -4,9 +4,11 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.usb.UsbManager;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.os.Build;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
@@ -33,14 +35,18 @@ public class HeadsetConnectionEventPlugin implements FlutterPlugin, MethodCallHa
     private final HeadsetEventListener headsetEventListener = new HeadsetEventListener() {
         @Override
         public void onHeadsetConnect() {
-            currentState = 1;
-            channel.invokeMethod("connect", "true");
+            if (currentState != 1) {
+                currentState = 1;
+                channel.invokeMethod("connect", "true");
+            }
         }
 
         @Override
         public void onHeadsetDisconnect() {
-            currentState = 0;
-            channel.invokeMethod("disconnect", "true");
+            if (currentState != 0) {
+                currentState = 0;
+                channel.invokeMethod("disconnect", "true");
+            }
         }
 
         @Override
@@ -51,6 +57,11 @@ public class HeadsetConnectionEventPlugin implements FlutterPlugin, MethodCallHa
         @Override
         public void onPrevButtonPress() {
             channel.invokeMethod("prevButton", "true");
+        }
+
+        @Override
+        public boolean getConnectedHeadset(AudioManager audioManager) {
+            return HeadsetConnectionEventPlugin.this.getConnectedHeadset(audioManager);
         }
     };
 
@@ -64,6 +75,8 @@ public class HeadsetConnectionEventPlugin implements FlutterPlugin, MethodCallHa
         filter.addAction(Intent.ACTION_HEADSET_PLUG);
         filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
         filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         flutterPluginBinding.getApplicationContext().registerReceiver(hReceiver, filter);
 
         audioManager = (AudioManager)flutterPluginBinding.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
@@ -77,9 +90,11 @@ public class HeadsetConnectionEventPlugin implements FlutterPlugin, MethodCallHa
             AudioDeviceInfo[] devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
 
             for (AudioDeviceInfo device : devices) {
+                Log.d(HeadsetConnectionEventPlugin.class.getName(), "getConnectedHeadset device type " + device.getType());
                 if (device.getType() == AudioDeviceInfo.TYPE_WIRED_HEADSET
                         || device.getType() == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
                         || device.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+                        || device.getType() == AudioDeviceInfo.TYPE_USB_HEADSET
                         || device.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
                     return true;
                 }

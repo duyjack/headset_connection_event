@@ -1,11 +1,18 @@
 package flutter.moum.headset_connection_event;
 
+import static androidx.core.content.ContextCompat.getSystemService;
+
 import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.usb.UsbManager;
+import android.media.AudioManager;
+import android.os.Build;
 import android.util.Log;
 import android.view.KeyEvent;
+
+import java.util.Objects;
 
 public class HeadsetBroadcastReceiver extends BroadcastReceiver {
     private final HeadsetEventListener headsetEventListener;
@@ -16,7 +23,7 @@ public class HeadsetBroadcastReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        switch (intent.getAction()) {
+        switch (Objects.requireNonNull(intent.getAction())) {
             case Intent.ACTION_HEADSET_PLUG:
                 final int state = intent.getIntExtra("state", -1);
 
@@ -46,6 +53,16 @@ public class HeadsetBroadcastReceiver extends BroadcastReceiver {
                 final int connectionState = intent.getExtras().getInt(BluetoothAdapter.EXTRA_STATE);
 
                 if (connectionState == BluetoothAdapter.STATE_OFF) {
+                    headsetEventListener.onHeadsetDisconnect();
+                }
+                break;
+            }
+            case UsbManager.ACTION_USB_DEVICE_ATTACHED:
+            case UsbManager.ACTION_USB_DEVICE_DETACHED: {
+                final AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+                if (headsetEventListener.getConnectedHeadset(audioManager)) {
+                    headsetEventListener.onHeadsetConnect();
+                } else {
                     headsetEventListener.onHeadsetDisconnect();
                 }
                 break;

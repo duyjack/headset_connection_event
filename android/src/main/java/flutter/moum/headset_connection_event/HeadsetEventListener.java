@@ -1,5 +1,7 @@
 package flutter.moum.headset_connection_event;
 
+import android.media.AudioManager;
+
 public interface HeadsetEventListener {
     void onHeadsetConnect();
 
@@ -8,4 +10,6 @@ public interface HeadsetEventListener {
     void onNextButtonPress();
 
     void onPrevButtonPress();
+
+    boolean getConnectedHeadset(AudioManager audioManager);
 }
